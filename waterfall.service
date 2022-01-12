@@ -1,0 +1,48 @@
+[Unit]
+Description=Waterfall Minecraft Proxy
+After=syslog.target network.target
+
+[Service]
+# Ensure to set the correct user and working directory (installation directory of your server) here
+User=waterfall
+WorkingDirectory=/opt/waterfall/
+
+Type=simple
+
+# You can customize the maximum amount of memory as well as the JVM flags here
+ExecStart=/bin/sh -c \
+        'find -L . \
+          -maxdepth 1 \
+          -type f \
+          -iregex ".*/\\(waterfall\\).*jar" \
+          -print0 \
+          -quit \
+        | xargs -0 -I{} \
+                /usr/bin/screen -DmS waterfall \
+                        /usr/bin/java \
+                          -Xms512M \
+                          -Xmx512M \
+                          -XX:+UseG1GC \
+                          -XX:G1HeapRegionSize=4M \
+                          -XX:+UnlockExperimentalVMOptions \
+                          -XX:+ParallelRefProcEnabled \
+                          -XX:+AlwaysPreTouch \
+                          -jar {}'
+
+ExecStop=/usr/bin/screen -p 0 -S waterfall -X eval 'stuff "say WATERFALL SERVER SHUTTING DOWN."\015'
+ExecStop=/bin/sh -c '/bin/sleep 15'
+ExecStop=/usr/bin/screen -p 0 -S waterfall -X eval 'stuff "end"\015'
+ExecStop=/bin/sh -c '/bin/sleep 5'
+
+# Restart the server when it is stopped or crashed after 30 seconds
+# Comment out RestartSec if you want to restart immediately
+Restart=always
+RestartSec=30
+
+# Alternative: Restart the server only when it stops regularly
+# Restart=on-success
+
+StandardInput=null
+
+[Install]
+WantedBy=multi-user.target
